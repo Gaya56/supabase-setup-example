@@ -8,7 +8,6 @@ CREATE TABLE api_keys (
   headers JSONB, -- Custom headers for this API
   rate_limit_per_minute INTEGER DEFAULT 60,
   is_active BOOLEAN DEFAULT true,
-  embedding VECTOR(1536), -- Vector embedding for intelligent API selection based on query context
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -22,9 +21,6 @@ CREATE POLICY "api_keys_policy" ON api_keys FOR ALL USING (true);
 -- Create index for faster lookups
 CREATE INDEX idx_api_keys_service_name ON api_keys(service_name);
 CREATE INDEX idx_api_keys_active ON api_keys(is_active);
-
--- Create vector index for embedding similarity search
-CREATE INDEX idx_api_keys_embedding ON api_keys USING hnsw (embedding vector_cosine_ops);
 
 -- Add trigger for updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()

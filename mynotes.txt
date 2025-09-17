@@ -1,0 +1,48 @@
+The integration plan proposes an intelligent web crawler that learns page structures once and then reuses them to minimize cost. 
+In Step 1, an edge function (`schema‑analyzer`) uses an LLM to analyse a webpage’s HTML and produce a JSON schema of CSS selectors; 
+the schema is stored in an `extraction_schemas` table with domain, URL pattern and pgvector embedding. Step 2 adds a `schema‑matcher` 
+that performs semantic search and pattern matching to select the best schema for a given URL. Step 3’s `smart‑crawler` uses the matched schema with crawl4ai’s `JsonCssExtractionStrategy` for fast, 
+non‑LLM scraping, falling back to LLM when no suitable schema exists. Step 4 extends the `crawl_results` table to include job and schema references, extraction method and confidence score, enabling semantic search over stored content. This architecture reduces API costs by \~90 % and speeds extraction 10×. The official resources advise starting with Step 2 database migrations, then Step 4’s embedding tests, followed by Step 3 crawling and finally Step 1’s LLM schema generator.
+
+
+Based on the current repository and the official documentation, the project already has the beginnings of a Supabase-backed crawling system (migrations for `api_keys` and `crawl_results`) and a clear 4‑step integration plan.  The next architecture should complete the remaining database foundation, implement intelligent schema management, and leverage Supabase’s vector and Edge Function capabilities for scale and cost‑efficiency.  Below is a detailed breakdown of the recommended architecture with citations from Supabase and crawl4ai’s official documentation.
+
+### 1. Enhance the database schema
+
+1. **Enable vector extension and create schema tables.**  Supabase uses the `pgvector` extension to store high‑dimensional embeddings; enable it and add a `vector` column sized to your embedding model (e.g. 1536 for OpenAI).  Create a new `extraction_schemas` table with columns such as `domain`, `url_pattern`, `schema_json` (JSONB), `description`, `success_rate`, `usage_count` and an `embedding vector(n)` with appropriate indexes.  Use a similar approach to create a `crawl_jobs` table to track each crawl request and reference the related schema.
+
+2. **Augment existing tables.**  Update the `crawl_results` table to reference the corresponding job and schema and record fields like `extraction_method` (LLM vs. schema), `confidence_score`, `processing_time_ms` and embeddings.  Extend the `api_keys` table to include cost and rate‑limit metadata and implement a `select_optimal_api_key` function for cost‑aware selection (as planned in the docs).
+
+3. **Implement the `match_documents` function for vector search.**  Supabase’s semantic search guide shows how to create a `match_documents` function that uses cosine distance (`<=>`) or negative inner product (`<#>`) to return the top‑N most similar embeddings from a table.  Tailor this function to search the `extraction_schemas` table by embedding, enabling semantic schema matching.
+
+4. **Configure row‑level security (RLS).**  Enable RLS on sensitive tables (e.g. `api_keys` and schema tables) and create policies so only authorized roles can modify them.  Supabase’s RLS guide shows how to enable RLS and write policies using `auth.uid()` to ensure users update only their own data.
+
+### 2. Build edge functions and triggers
+
+1. **`schema-analyzer` (LLM structure learning).**  This Edge Function accepts a URL and optional HTML, selects the optimal API key, uses an LLM to generate a schema with CSS selectors, computes an embedding, and inserts a row into `extraction_schemas`.  Edge Functions run in a globally distributed Deno runtime and integrate securely with your Supabase project via environment variables.
+
+2. **`schema-matcher` (schema selection).**  Given a URL, this function uses the `match_documents` function to find the most similar schema by embedding and falls back to exact domain or pattern matching.  If no schema matches, it signals the need for a new schema.
+
+3. **`smart-crawler` (schema‑based crawling).**  For each crawl job, this function checks for a matching schema; if found and its success rate is high, it uses crawl4ai’s `JsonCssExtractionStrategy` for LLM‑free extraction.  The crawl4ai docs highlight that schema‑based extraction via CSS/XPath selectors is faster, cheaper, and more reliable than LLM extraction.  If extraction fails, the function falls back to the LLM approach and triggers schema generation.
+
+4. **Embedding triggers.**  Supabase’s automatic embeddings guide suggests using triggers and queues to generate embeddings asynchronously with pgvector, pgmq and Edge Functions.  Implement triggers to call an Edge Function for embedding generation when new schemas or crawl results are inserted or updated.
+
+### 3. Implement monitoring and optimization
+
+1. **Success‑rate update function.**  Create a database function (as drafted in the plan) to update each schema’s `success_rate` based on completed jobs.  Use this metric for schema selection.
+
+2. **Indexing and performance.**  Add HNSW or IVFFlat indexes on vector columns to speed up similarity search; Supabase’s semantic search guide notes that proper indexing is essential for fast queries.
+
+3. **Dashboards and analytics.**  Create SQL views to monitor schema performance, job status, cost savings and LLM usage, following the plan’s examples.
+
+### 4. Final integration and deployment
+
+1. **Migration scripts.**  Use Supabase CLI to create and apply migration files to define new tables and functions.  Supabase’s migration guide shows how to create migration files and apply them using `supabase migration up`.
+
+2. **Local testing and deployment.**  Develop and test Edge Functions locally with the Supabase CLI (`supabase functions serve`) and deploy them when ready.  The Edge Functions docs describe deployment methods and highlight that functions are globally distributed and integrated with the Supabase project.
+
+3. **Security and environment variables.**  Store API keys and secrets in Supabase’s project secrets and reference them via environment variables within the Edge Functions.
+
+### Summary
+
+The next architecture should extend the existing database with schema and job tables, leverage pgvector for semantic schema matching, and build Edge Functions to generate, select and apply extraction schemas.  This design follows Supabase’s official guidance for migrations, vector columns, semantic search functions and edge functions, and uses crawl4ai’s documented LLM‑free extraction strategies for fast and cost‑effective scraping.
