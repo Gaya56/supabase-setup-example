@@ -1,8 +1,14 @@
 The integration plan proposes an intelligent web crawler that learns page structures once and then reuses them to minimize cost. 
 In Step 1, an edge function (`schema‑analyzer`) uses an LLM to analyse a webpage’s HTML and produce a JSON schema of CSS selectors; 
-the schema is stored in an `extraction_schemas` table with domain, URL pattern and pgvector embedding. Step 2 adds a `schema‑matcher` 
-that performs semantic search and pattern matching to select the best schema for a given URL. Step 3’s `smart‑crawler` uses the matched schema with crawl4ai’s `JsonCssExtractionStrategy` for fast, 
-non‑LLM scraping, falling back to LLM when no suitable schema exists. Step 4 extends the `crawl_results` table to include job and schema references, extraction method and confidence score, enabling semantic search over stored content. This architecture reduces API costs by \~90 % and speeds extraction 10×. The official resources advise starting with Step 2 database migrations, then Step 4’s embedding tests, followed by Step 3 crawling and finally Step 1’s LLM schema generator.
+the schema is stored in an `extraction_schemas` table with domain, URL pattern and pgvector embedding. 
+
+Step 2 adds a `schema‑matcher` 
+that performs semantic search and pattern matching to select the best schema for a given URL. 
+
+Step 3’s `smart‑crawler` uses the matched schema with crawl4ai’s `JsonCssExtractionStrategy` for fast, 
+non‑LLM scraping, falling back to LLM when no suitable schema exists. Step 4 extends the `crawl_results` table to include job and schema references, extraction method and confidence score, enabling semantic search over stored content. This architecture reduces API costs by \~90 % and speeds extraction 10×. The official resources advise starting with Step 2 database migrations, 
+
+then Step 4’s embedding tests, followed by Step 3 crawling and finally Step 1’s LLM schema generator.
 
 
 Based on the current repository and the official documentation, the project already has the beginnings of a Supabase-backed crawling system (migrations for `api_keys` and `crawl_results`) and a clear 4‑step integration plan.  The next architecture should complete the remaining database foundation, implement intelligent schema management, and leverage Supabase’s vector and Edge Function capabilities for scale and cost‑efficiency.  Below is a detailed breakdown of the recommended architecture with citations from Supabase and crawl4ai’s official documentation.

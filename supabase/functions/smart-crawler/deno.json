@@ -1,0 +1,7 @@
+{
+    "imports": {
+        "@supabase/supabase-js": "jsr:@supabase/supabase-js@2",
+        "@openai/openai": "jsr:@openai/openai",
+        "crawl4ai": "npm:crawl4ai@latest"
+    }
+}

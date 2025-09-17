@@ -1,0 +1,22 @@
+# requirements.txt for Complete Python Crawl4AI + Supabase Solution
+
+# Core crawling
+crawl4ai>=0.3.0
+
+# Database connectivity  
+psycopg2-binary>=2.9.0
+
+# Environment management
+python-dotenv>=1.0.0
+
+# Data handling
+asyncio
+json5
+
+# Optional: FastAPI for API endpoints
+fastapi>=0.100.0
+uvicorn>=0.20.0
+
+# Optional: Additional utilities
+pydantic>=2.0.0
+typing-extensions>=4.0.0
