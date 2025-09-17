@@ -5,12 +5,12 @@ crawl4ai>=0.3.0
 
 # Database connectivity  
 psycopg2-binary>=2.9.0
+supabase>=2.0.0
 
 # Environment management
 python-dotenv>=1.0.0
 
 # Data handling
-asyncio
 json5
 
 # Optional: FastAPI for API endpoints

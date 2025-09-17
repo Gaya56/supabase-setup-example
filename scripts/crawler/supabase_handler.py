@@ -33,32 +33,42 @@ class DatabaseConfig:
     @classmethod
     def from_env(cls) -> "DatabaseConfig":
         """Create config from environment variables"""
-        # Support both direct connection and Supabase URL parsing
-        supabase_url = os.getenv("SUPABASE_URL")
+        # Prioritize individual connection parameters over URL
+        host = os.getenv("SUPABASE_HOST")
+        port = os.getenv("SUPABASE_PORT")
 
-        if supabase_url and "://" in supabase_url:
-            # Parse full URL
+        if host and port:
+            # Use individual components (preferred for Supabase pooler)
+            return cls(
+                host=host,
+                port=int(port),
+                database=os.getenv("SUPABASE_DB", "postgres"),
+                user=os.getenv("SUPABASE_KEY", "postgres"),
+                password=os.getenv("SUPABASE_PASSWORD", "postgres"),
+            )
+
+        # Fallback to URL parsing if individual params not available
+        supabase_url = os.getenv("SUPABASE_URL")
+        if supabase_url and "postgresql://" in supabase_url:
+            # Parse PostgreSQL connection URL
             from urllib.parse import urlparse
 
             parsed = urlparse(supabase_url)
-            host = parsed.hostname
-            port = parsed.port or 5432
-        elif supabase_url:
-            # Handle host:port format
-            parts = supabase_url.split(":")
-            host = parts[0]
-            port = int(parts[1]) if len(parts) > 1 else 5432
-        else:
-            # Use individual components
-            host = os.getenv("SUPABASE_HOST", "localhost")
-            port = int(os.getenv("SUPABASE_PORT", "5432"))
+            return cls(
+                host=parsed.hostname or "localhost",
+                port=parsed.port or 5432,
+                database=parsed.path.lstrip("/") or "postgres",
+                user=parsed.username or "postgres",
+                password=parsed.password or "postgres",
+            )
 
+        # Default fallback
         return cls(
-            host=host,
-            port=port,
-            database=os.getenv("SUPABASE_DB", "postgres"),
-            user=os.getenv("SUPABASE_KEY", "postgres"),
-            password=os.getenv("SUPABASE_PASSWORD", "postgres"),
+            host="localhost",
+            port=5432,
+            database="postgres",
+            user="postgres",
+            password="postgres",
         )
 
 
